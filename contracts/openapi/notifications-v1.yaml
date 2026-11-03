@@ -1,0 +1,67 @@
+openapi: 3.1.0
+info:
+  title: LendUp Notifications API
+  version: 1.0.0
+  description: Notificaciones en la plataforma (RF48) y recordatorios (RF22). JSON en snake_case, mismo contrato que el monolito.
+servers: [{ url: /api/v1 }]
+security: [{ firebaseBearer: [] }]
+paths:
+  /notificaciones:
+    get:
+      operationId: listarNotificaciones
+      tags: [Notificaciones]
+      description: Avisos DISPONIBLE y LEIDA del estudiante autenticado, del más reciente al más antiguo (máximo 200). Los recordatorios PROGRAMADA y los CANCELADA no se muestran.
+      responses:
+        '200': { description: Lista de avisos, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Notificacion' } } } } }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+  /notificaciones/{id}:
+    patch:
+      operationId: marcarNotificacionLeida
+      tags: [Notificaciones]
+      description: Marca el aviso como LEIDA. Sin cuerpo.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        '200': { description: Aviso actualizado, content: { application/json: { schema: { $ref: '#/components/schemas/Notificacion' } } } }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { description: 'NO_AUTORIZADO: el aviso es de otro estudiante (Operación no permitida)', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'NO_ENCONTRADO: No encontrado', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '409': { description: 'CONFLICTO_NEGOCIO: Aviso no disponible (no está DISPONIBLE)', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+components:
+  securitySchemes:
+    firebaseBearer: { type: http, scheme: bearer, bearerFormat: Firebase ID token }
+  responses:
+    Error:
+      description: Error con el formato común
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+  schemas:
+    Error:
+      type: object
+      required: [status, error, message]
+      properties: { status: { type: integer }, error: { type: string, example: CONFLICTO_NEGOCIO }, message: { type: string }, timestamp: { type: string, format: date-time } }
+    Notificacion:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        destinatario_usuario_id: { type: string, format: uuid }
+        clave_notificacion: { type: string }
+        tipo: { enum: [EVENTO, RECORDATORIO] }
+        origen_tipo: { enum: [SOLICITUD, RESERVA, PRESTAMO, PAGO, GARANTIA, EXTENSION, INCIDENCIA] }
+        origen_id: { type: string, format: uuid }
+        evento_origen_id: { type: [string, 'null'] }
+        titulo: { type: string, maxLength: 180 }
+        mensaje: { type: string }
+        estado: { enum: [PROGRAMADA, DISPONIBLE, LEIDA, CANCELADA] }
+        programada_para: { type: [string, 'null'], format: date-time }
+        disponible_en: { type: [string, 'null'], format: date-time }
+        leida_en: { type: [string, 'null'], format: date-time }
+        cancelada_en: { type: [string, 'null'], format: date-time }
+        enviar_correo: { type: boolean }
+        estado_correo: { enum: [NO_APLICA, PENDIENTE, ENVIADO, FALLIDO] }
+        intentos_correo: { type: integer }
+        ultimo_intento_correo_en: { type: [string, 'null'], format: date-time }
+        correo_enviado_en: { type: [string, 'null'], format: date-time }
+        ultimo_error_correo: { type: [string, 'null'] }
+        creada_en: { type: string, format: date-time }
+        actualizada_en: { type: string, format: date-time }
