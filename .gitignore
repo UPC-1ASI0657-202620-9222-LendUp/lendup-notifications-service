@@ -1,0 +1,20 @@
+bin/
+obj/
+TestResults/
+# Código generado por Reqnroll en cada compilación
+*.feature.cs
+*.user
+*.suo
+.vs/
+.idea/
+.vscode/
+*.log
+.env
+.env.*
+!.env.example
+.secrets/
+firebase-service-account*.json
+service-account*.json
+*-firebase-adminsdk-*.json
+google-application-credentials*.json
+appsettings.*.local.json
