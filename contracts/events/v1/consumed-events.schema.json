@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lendup.example/contracts/events/v1/notifications-consumed-events.schema.json",
+  "title": "Events consumed by Notifications v1",
+  "description": "Envelope estándar de lendup.domain.events. Notificaciones no publica eventos. Reservas y Pagos ya publican los suyos; Préstamos y Evidencias son contratos PROPUESTOS (productor aún inexistente, routing keys configurables). El consumidor despacha por routing key.",
+  "type": "object",
+  "required": ["event_id", "event_type", "event_version", "occurred_at", "payload"],
+  "properties": {
+    "event_id": { "type": "string", "format": "uuid" },
+    "event_type": { "type": "string" },
+    "event_version": { "const": 1 },
+    "aggregate_version": { "type": "integer", "minimum": 0 },
+    "aggregate_id": { "type": "string", "format": "uuid" },
+    "occurred_at": { "type": "string", "format": "date-time" },
+    "correlation_id": { "type": "string" },
+    "payload": { "type": "object" }
+  },
+  "$defs": {
+    "solicitudCreada": {
+      "description": "reservas.solicitud-creada.v1 (Reservas, disponible). Avisa al prestamista.",
+      "type": "object", "required": ["solicitud_id", "prestamista_usuario_id"],
+      "properties": { "solicitud_id": { "type": "string", "format": "uuid" }, "prestamista_usuario_id": { "type": "string", "format": "uuid" }, "prestatario_usuario_id": { "type": "string", "format": "uuid" } }
+    },
+    "reservaConfirmada": {
+      "description": "reservas.confirmada.v1 (Reservas, disponible). Avisa a ambos y programa recordatorios de entrega y devolución (RF22).",
+      "type": "object", "required": ["reserva_id", "prestamista_usuario_id", "prestatario_usuario_id", "desde", "hasta"],
+      "properties": {
+        "reserva_id": { "type": "string", "format": "uuid" },
+        "prestamista_usuario_id": { "type": "string", "format": "uuid" },
+        "prestatario_usuario_id": { "type": "string", "format": "uuid" },
+        "desde": { "type": "string", "format": "local-date-time", "description": "Hora de negocio America/Lima sin offset" },
+        "hasta": { "type": "string", "format": "local-date-time" }
+      }
+    },
+    "reservaCancelada": {
+      "description": "reservas.cancelada.v1 (Reservas, disponible). Solo trae reserva_id: los destinatarios se obtienen de los avisos previos de esa reserva; cancela recordatorios pendientes.",
+      "type": "object", "required": ["reserva_id"],
+      "properties": { "reserva_id": { "type": "string", "format": "uuid" } }
+    },
+    "pagos": {
+      "description": "pagos.*.v1 (lendup-payments-service, disponible): PagoConfirmado, PagoRechazado, GarantiaConstituida, TarifaLiberada, GarantiaDevuelta, GarantiaRetenida, ReembolsoProcesado. Ver payments-events.schema.json de Pagos. Campos usados aquí:",
+      "type": "object", "required": ["prestatario_usuario_id", "prestamista_usuario_id"],
+      "properties": {
+        "transaccion_id": { "type": "string", "format": "uuid" },
+        "garantia_id": { "type": "string", "format": "uuid" },
+        "prestatario_usuario_id": { "type": "string", "format": "uuid" },
+        "prestamista_usuario_id": { "type": "string", "format": "uuid" },
+        "tipo": { "type": "string" },
+        "monto": { "type": "number" }, "monto_constituido": { "type": "number" }, "monto_devuelto": { "type": "number" },
+        "monto_retenido": { "type": "number" }, "monto_neto_prestamista": { "type": "number" },
+        "moneda": { "type": "string", "pattern": "^[A-Z]{3}$" }
+      }
+    },
+    "prestamo": {
+      "description": "PENDIENTE (Préstamos). PrestamoActivado (LOAN_ACTIVATED_ROUTING_KEY=prestamos.activado.v1) y PrestamoFinalizado (LOAN_FINISHED_ROUTING_KEY=prestamos.finalizado.v1). Deben traer los participantes, como los eventos de Pagos.",
+      "type": "object", "required": ["prestamo_id", "prestatario_usuario_id", "prestamista_usuario_id"],
+      "properties": { "prestamo_id": { "type": "string", "format": "uuid" }, "prestatario_usuario_id": { "type": "string", "format": "uuid" }, "prestamista_usuario_id": { "type": "string", "format": "uuid" } }
+    },
+    "extensionAceptada": {
+      "description": "PENDIENTE (Préstamos). EXTENSION_ACCEPTED_ROUTING_KEY=prestamos.extension-aceptada.v1.",
+      "type": "object", "required": ["cambio_fecha_prestamo_id", "prestatario_usuario_id", "prestamista_usuario_id"],
+      "properties": { "prestamo_id": { "type": "string", "format": "uuid" }, "cambio_fecha_prestamo_id": { "type": "string", "format": "uuid" }, "prestatario_usuario_id": { "type": "string", "format": "uuid" }, "prestamista_usuario_id": { "type": "string", "format": "uuid" } }
+    },
+    "incidencia": {
+      "description": "PENDIENTE (Evidencias). IncidenciaReportada (INCIDENT_REPORTED_ROUTING_KEY=evidencias.incidencia-reportada.v1) e IncidenciaResuelta (INCIDENT_RESOLVED_ROUTING_KEY=evidencias.incidencia-resuelta.v1). justificacion_resolucion es opcional y se usa como mensaje, igual que el monolito.",
+      "type": "object", "required": ["incidencia_id", "prestatario_usuario_id", "prestamista_usuario_id"],
+      "properties": { "incidencia_id": { "type": "string", "format": "uuid" }, "prestamo_id": { "type": "string", "format": "uuid" }, "prestatario_usuario_id": { "type": "string", "format": "uuid" }, "prestamista_usuario_id": { "type": "string", "format": "uuid" }, "justificacion_resolucion": { "type": "string" } }
+    }
+  }
+}
