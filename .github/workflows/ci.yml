@@ -1,0 +1,23 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Restore
+        run: dotnet restore LendUp.Notifications.sln
+      - name: Build
+        run: dotnet build LendUp.Notifications.sln -c Release --no-restore
+      - name: Test (unitarias, contrato, Reqnroll y Testcontainers)
+        run: dotnet test LendUp.Notifications.sln -c Release --no-build --logger "trx;LogFileName=test-results.trx"
+      - name: Build container without publishing
+        run: docker build --platform linux/amd64 -t lendup-notifications-service:ci .
