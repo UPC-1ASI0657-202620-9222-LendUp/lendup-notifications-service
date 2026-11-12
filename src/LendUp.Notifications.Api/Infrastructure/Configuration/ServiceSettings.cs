@@ -39,9 +39,9 @@ public sealed record ServiceSettings(
         return new ServiceSettings(
             new WebSettings(I("SERVER_PORT", 8083), S("CORS_ORIGINS").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
                 B("SWAGGER_ENABLED", false), B("SWAGGER_PUBLIC", false)),
-            new DatabaseSettings(S("DB_HOST", "localhost"), I("DB_PORT", 3309), S("DB_NAME", "lendup_notificaciones"), S("DB_USERNAME", "lendup_notificaciones"),
+            new DatabaseSettings(S("DB_HOST", "localhost"), I("DB_PORT", 3312), S("DB_NAME", "lendup_notificaciones"), S("DB_USERNAME", "lendup_notificaciones"),
                 S("DB_PASSWORD"), B("DB_MIGRATE_ON_STARTUP", true)),
-            new RabbitMqSettings(B("RABBITMQ_ENABLED", true), S("RABBITMQ_HOST", "localhost"), I("RABBITMQ_PORT", 5674), S("RABBITMQ_USERNAME"), S("RABBITMQ_PASSWORD")),
+            new RabbitMqSettings(B("RABBITMQ_ENABLED", true), S("RABBITMQ_HOST", "localhost"), I("RABBITMQ_PORT", 5676), S("RABBITMQ_USERNAME"), S("RABBITMQ_PASSWORD")),
             new FirebaseSettings(S("FIREBASE_PROJECT_ID")),
             new IdentitySettings(S("IDENTITY_SERVICE_BASE_URL"), S("IDENTITY_SERVICE_TOKEN"), S("IDENTITY_FIREBASE_USER_URI_TEMPLATE"),
                 S("IDENTITY_USER_EMAIL_URI_TEMPLATE"), I("IDENTITY_CONNECT_TIMEOUT_MS", 2000), I("IDENTITY_READ_TIMEOUT_MS", 3000)),

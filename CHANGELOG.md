@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Corregido
+- Puertos locales que chocaban con Identidad (MySQL 3309): ahora son 3312, 5676 y 15676, configurables con `MYSQL_HOST_PORT`, `RABBITMQ_HOST_PORT` y `RABBITMQ_MANAGEMENT_HOST_PORT`.
+- `.env.example` alineado al equipo: Firebase `lendup-desarrollo`, Identidad en `:8081`, frontend en `:3000`.
+- Colección Postman: los eventos simulados respetan las variables de entorno (`pm.variables`).
+
+### Agregado
+- Opción de broker compartido (`RABBITMQ_HOST`/`RABBITMQ_PORT`), para recibir los eventos reales de Reservas y Pagos.
+- Postman: login de Firebase y `usuario.id` desde Identidad, para que los eventos simulados lleguen a tu usuario.
+
+
 - Servicio inicial de Notificaciones en C# · ASP.NET Core (.NET 10) con capas Domain, Application, Infrastructure e Interfaces y los componentes de la Fig. 20.
 - Base propia `lendup_notificaciones` con migraciones de EF Core (Pomelo): tabla `notificaciones` con los índices del monolito y la inbox `processed_events`.
 - Endpoints compatibles con el frontend: `GET /api/v1/notificaciones` y `PATCH /api/v1/notificaciones/{id}`, con el mismo formato de error.
