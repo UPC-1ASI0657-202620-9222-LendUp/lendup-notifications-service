@@ -13,7 +13,7 @@ Detalles: [arquitectura](docs/architecture.md), [API](docs/api-contract.md), [pr
 
 ## Inicio local
 
-Requisitos: .NET SDK 10 (ver `global.json`), Docker con Compose v2 y credencial Firebase de desarrollo.
+Requisitos: .NET SDK 10 (ver `global.json`), Docker con Compose v2 y la credencial Firebase de desarrollo (proyecto `lendup-desarrollo`).
 
 ```powershell
 Copy-Item .env.example .env
@@ -23,7 +23,22 @@ dotnet test
 docker compose up --build
 ```
 
-API: `http://localhost:8083/api/v1`; readiness: `http://localhost:8083/actuator/health/readiness`. MySQL en `127.0.0.1:3309`, RabbitMQ en `127.0.0.1:5674` y su consola en `http://localhost:15674` (puertos distintos a Reservas y Pagos para poder levantar los tres). Para recibir los eventos reales de Reservas y Pagos, los tres servicios deben apuntar al mismo broker.
+API: `http://localhost:8083/api/v1`; readiness: `http://localhost:8083/actuator/health/readiness`. MySQL en `127.0.0.1:3312`, RabbitMQ en `127.0.0.1:5676` y su consola en `http://localhost:15676`. Son puertos distintos a los de Reservas, Identidad (que usa el 3309), Pagos y Reputación; se cambian con `MYSQL_HOST_PORT`, `RABBITMQ_HOST_PORT` y `RABBITMQ_MANAGEMENT_HOST_PORT`.
+
+### Broker compartido (integración con el equipo)
+
+Notificaciones no publica eventos: solo consume. Con el compose por defecto escucha **su propio** RabbitMQ, así que nunca verá los eventos que Reservas o Pagos publiquen en otro broker. Para integrar, todos los servicios deben apuntar al mismo broker (en local puede ser el de Reservas, `localhost:5672`). En `.env`:
+
+```
+RABBITMQ_HOST=host.docker.internal
+RABBITMQ_PORT=5672
+RABBITMQ_USERNAME=<usuario de ese broker>
+RABBITMQ_PASSWORD=<contraseña de ese broker>
+```
+
+Para probar solo este servicio, la colección Postman publica eventos simulados en el broker. Cada petición debe responder `routed=true`; si sale `routed=false`, Notificaciones no está conectado a ese broker. El destinatario es el `prestatario_usuario_id` del evento: la carpeta *0b. Preparación* lo toma de tu `usuario.id` en Identidad, para que `GET /notificaciones` con tu token muestre esos avisos.
+
+Los correos se envían solo con un token de servicio de Identidad y `IDENTITY_USER_EMAIL_URI_TEMPLATE`, y Identidad aún no tiene ese endpoint. Mientras tanto, el aviso en la app se crea igual y el correo se registra en el log.
 
 Para ejecutar fuera de Docker (con MySQL y RabbitMQ del compose):
 

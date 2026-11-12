@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "LendUp Notifications Service",
-    "description": "Evidencias del Sprint 2 para lendup-notifications-service. prestatario_usuario_id debe ser el usuario_id interno que Identidad devuelve para firebase_token. Orden sugerido: 1) publicar eventos simulados; 2) listar avisos; 3) marcar uno como leído. Los recordatorios se programan con ReservaConfirmada y aparecen cuando llega su hora (24 h antes de desde/hasta).",
+    "description": "Orden sugerido: 0b (token y usuario) → 1 (publicar eventos; cada uno debe responder routed=true) → 2 (listar y marcar). Si un evento responde routed=false, el servicio de Notificaciones no está conectado a ese broker.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -39,7 +39,7 @@
     },
     {
       "key": "rabbit_url",
-      "value": "http://localhost:15674"
+      "value": "http://localhost:15676"
     },
     {
       "key": "rabbit_user",
@@ -48,6 +48,22 @@
     {
       "key": "rabbit_pass",
       "value": "change-me"
+    },
+    {
+      "key": "identity_url",
+      "value": "http://localhost:8081"
+    },
+    {
+      "key": "firebase_api_key",
+      "value": "PEGAR_API_KEY_WEB_DE_FIREBASE"
+    },
+    {
+      "key": "test_email",
+      "value": "PEGAR_CORREO_DE_PRUEBA"
+    },
+    {
+      "key": "test_password",
+      "value": "PEGAR_CONTRASENA_DE_PRUEBA"
     }
   ],
   "item": [
@@ -95,6 +111,76 @@
       ]
     },
     {
+      "name": "0b. Preparación (token y usuario)",
+      "item": [
+        {
+          "name": "Iniciar sesión en Firebase (obtiene firebase_token)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Si ya pegaste firebase_token a mano (o no llenaste correo/contraseña), se salta este paso.",
+                  "const pass = pm.variables.get('test_password') || '';",
+                  "if (!pass || pass.startsWith('PEGAR')) pm.execution.skipRequest();"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con idToken', () => { pm.response.to.have.status(200); pm.collectionVariables.set('firebase_token', pm.response.json().idToken); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={{firebase_api_key}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{test_email}}\",\n  \"password\": \"{{test_password}}\",\n  \"returnSecureToken\": true\n}"
+            },
+            "description": "Proyecto Firebase del equipo (lendup-desarrollo), usuario de prueba con correo verificado. firebase_api_key es la apiKey web pública (VITE_FIREBASE_API_KEY del frontend)."
+          }
+        },
+        {
+          "name": "Mi usuario en Identidad (obtiene prestatario_usuario_id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con usuario.id', () => { pm.response.to.have.status(200); pm.collectionVariables.set('prestatario_usuario_id', pm.response.json().usuario.id); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebase_token}}"
+              }
+            ],
+            "url": "{{identity_url}}/api/v1/estudiantes/me",
+            "description": "Los eventos simulados usan este id como prestatario, así 'Listar mis notificaciones' devuelve los avisos que generan."
+          }
+        }
+      ]
+    },
+    {
       "name": "1. Eventos simulados (RabbitMQ)",
       "item": [
         {
@@ -105,9 +191,9 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const payload = { solicitud_id: pm.variables.replaceIn('{{$guid}}'), publicacion_id: pm.variables.replaceIn('{{$guid}}'), prestatario_usuario_id: pm.collectionVariables.get('prestatario_usuario_id'), prestamista_usuario_id: pm.collectionVariables.get('prestamista_usuario_id'), desde: '2026-11-20T09:00:00', hasta: '2026-11-22T09:00:00' };",
+                  "const payload = { solicitud_id: pm.variables.replaceIn('{{$guid}}'), publicacion_id: pm.variables.replaceIn('{{$guid}}'), prestatario_usuario_id: pm.variables.get('prestatario_usuario_id'), prestamista_usuario_id: pm.variables.get('prestamista_usuario_id'), desde: '2026-11-20T09:00:00', hasta: '2026-11-22T09:00:00' };",
                   "const envelope = { event_id: pm.variables.replaceIn('{{$guid}}'), event_type: 'SolicitudCreada', event_version: 1, aggregate_version: Date.now(),",
-                  "  aggregate_id: pm.collectionVariables.get('reserva_id'), occurred_at: new Date().toISOString(), correlation_id: 'postman', payload };",
+                  "  aggregate_id: pm.variables.get('reserva_id'), occurred_at: new Date().toISOString(), correlation_id: 'postman', payload };",
                   "pm.variables.set('rabbit_body', JSON.stringify({ properties: { content_type: 'application/json' }, routing_key: 'reservas.solicitud-creada.v1', payload: JSON.stringify(envelope), payload_encoding: 'string' }));"
                 ]
               }
@@ -159,9 +245,9 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const payload = (() => { const lima = new Date(Date.now() - 5 * 3600 * 1000); const fmt = (d) => d.toISOString().substring(0, 19); return { reserva_id: pm.collectionVariables.get('reserva_id'), prestatario_usuario_id: pm.collectionVariables.get('prestatario_usuario_id'), prestamista_usuario_id: pm.collectionVariables.get('prestamista_usuario_id'), desde: fmt(new Date(lima.getTime() + 2 * 3600 * 1000)), hasta: fmt(new Date(lima.getTime() + 3 * 86400 * 1000)), tarifa_diaria_acordada: 20.00, garantia_monetaria_acordada: 50.00, moneda_acordada: 'PEN' }; })();",
+                  "const payload = (() => { const lima = new Date(Date.now() - 5 * 3600 * 1000); const fmt = (d) => d.toISOString().substring(0, 19); return { reserva_id: pm.variables.get('reserva_id'), prestatario_usuario_id: pm.variables.get('prestatario_usuario_id'), prestamista_usuario_id: pm.variables.get('prestamista_usuario_id'), desde: fmt(new Date(lima.getTime() + 2 * 3600 * 1000)), hasta: fmt(new Date(lima.getTime() + 3 * 86400 * 1000)), tarifa_diaria_acordada: 20.00, garantia_monetaria_acordada: 50.00, moneda_acordada: 'PEN' }; })();",
                   "const envelope = { event_id: pm.variables.replaceIn('{{$guid}}'), event_type: 'ReservaConfirmada', event_version: 1, aggregate_version: Date.now(),",
-                  "  aggregate_id: pm.collectionVariables.get('reserva_id'), occurred_at: new Date().toISOString(), correlation_id: 'postman', payload };",
+                  "  aggregate_id: pm.variables.get('reserva_id'), occurred_at: new Date().toISOString(), correlation_id: 'postman', payload };",
                   "pm.variables.set('rabbit_body', JSON.stringify({ properties: { content_type: 'application/json' }, routing_key: 'reservas.confirmada.v1', payload: JSON.stringify(envelope), payload_encoding: 'string' }));"
                 ]
               }
@@ -213,9 +299,9 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const payload = { prestamo_id: pm.collectionVariables.get('prestamo_id'), reserva_id: pm.collectionVariables.get('reserva_id'), prestatario_usuario_id: pm.collectionVariables.get('prestatario_usuario_id'), prestamista_usuario_id: pm.collectionVariables.get('prestamista_usuario_id'), transaccion_id: pm.variables.replaceIn('{{$guid}}'), tipo: 'PAGO_TARIFA', estado: 'CONFIRMADA', monto: 60.00, moneda: 'PEN' };",
+                  "const payload = { prestamo_id: pm.variables.get('prestamo_id'), reserva_id: pm.variables.get('reserva_id'), prestatario_usuario_id: pm.variables.get('prestatario_usuario_id'), prestamista_usuario_id: pm.variables.get('prestamista_usuario_id'), transaccion_id: pm.variables.replaceIn('{{$guid}}'), tipo: 'PAGO_TARIFA', estado: 'CONFIRMADA', monto: 60.00, moneda: 'PEN' };",
                   "const envelope = { event_id: pm.variables.replaceIn('{{$guid}}'), event_type: 'PagoConfirmado', event_version: 1, aggregate_version: Date.now(),",
-                  "  aggregate_id: pm.collectionVariables.get('prestamo_id'), occurred_at: new Date().toISOString(), correlation_id: 'postman', payload };",
+                  "  aggregate_id: pm.variables.get('prestamo_id'), occurred_at: new Date().toISOString(), correlation_id: 'postman', payload };",
                   "pm.variables.set('rabbit_body', JSON.stringify({ properties: { content_type: 'application/json' }, routing_key: 'pagos.pago-confirmado.v1', payload: JSON.stringify(envelope), payload_encoding: 'string' }));"
                 ]
               }
@@ -267,9 +353,9 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const payload = { prestamo_id: pm.collectionVariables.get('prestamo_id'), prestatario_usuario_id: pm.collectionVariables.get('prestatario_usuario_id'), prestamista_usuario_id: pm.collectionVariables.get('prestamista_usuario_id'), garantia_id: pm.variables.replaceIn('{{$guid}}'), transaccion_id: pm.variables.replaceIn('{{$guid}}'), estado_garantia: 'DEVUELTA', moneda: 'PEN', monto_devuelto: 50.00 };",
+                  "const payload = { prestamo_id: pm.variables.get('prestamo_id'), prestatario_usuario_id: pm.variables.get('prestatario_usuario_id'), prestamista_usuario_id: pm.variables.get('prestamista_usuario_id'), garantia_id: pm.variables.replaceIn('{{$guid}}'), transaccion_id: pm.variables.replaceIn('{{$guid}}'), estado_garantia: 'DEVUELTA', moneda: 'PEN', monto_devuelto: 50.00 };",
                   "const envelope = { event_id: pm.variables.replaceIn('{{$guid}}'), event_type: 'GarantiaDevuelta', event_version: 1, aggregate_version: Date.now(),",
-                  "  aggregate_id: pm.collectionVariables.get('prestamo_id'), occurred_at: new Date().toISOString(), correlation_id: 'postman', payload };",
+                  "  aggregate_id: pm.variables.get('prestamo_id'), occurred_at: new Date().toISOString(), correlation_id: 'postman', payload };",
                   "pm.variables.set('rabbit_body', JSON.stringify({ properties: { content_type: 'application/json' }, routing_key: 'pagos.garantia-devuelta.v1', payload: JSON.stringify(envelope), payload_encoding: 'string' }));"
                 ]
               }
@@ -321,9 +407,9 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const payload = { prestamo_id: pm.collectionVariables.get('prestamo_id'), prestatario_usuario_id: pm.collectionVariables.get('prestatario_usuario_id'), prestamista_usuario_id: pm.collectionVariables.get('prestamista_usuario_id') };",
+                  "const payload = { prestamo_id: pm.variables.get('prestamo_id'), prestatario_usuario_id: pm.variables.get('prestatario_usuario_id'), prestamista_usuario_id: pm.variables.get('prestamista_usuario_id') };",
                   "const envelope = { event_id: pm.variables.replaceIn('{{$guid}}'), event_type: 'PrestamoActivado', event_version: 1, aggregate_version: Date.now(),",
-                  "  aggregate_id: pm.collectionVariables.get('prestamo_id'), occurred_at: new Date().toISOString(), correlation_id: 'postman', payload };",
+                  "  aggregate_id: pm.variables.get('prestamo_id'), occurred_at: new Date().toISOString(), correlation_id: 'postman', payload };",
                   "pm.variables.set('rabbit_body', JSON.stringify({ properties: { content_type: 'application/json' }, routing_key: 'prestamos.activado.v1', payload: JSON.stringify(envelope), payload_encoding: 'string' }));"
                 ]
               }
@@ -375,9 +461,9 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const payload = { incidencia_id: pm.collectionVariables.get('incidencia_id'), prestamo_id: pm.collectionVariables.get('prestamo_id'), prestatario_usuario_id: pm.collectionVariables.get('prestatario_usuario_id'), prestamista_usuario_id: pm.collectionVariables.get('prestamista_usuario_id'), decision_garantia: 'AFECTACION_PARCIAL', monto_garantia_afectado: 20.00, justificacion_resolucion: 'Daño leve comprobado con las evidencias.' };",
+                  "const payload = { incidencia_id: pm.variables.get('incidencia_id'), prestamo_id: pm.variables.get('prestamo_id'), prestatario_usuario_id: pm.variables.get('prestatario_usuario_id'), prestamista_usuario_id: pm.variables.get('prestamista_usuario_id'), decision_garantia: 'AFECTACION_PARCIAL', monto_garantia_afectado: 20.00, justificacion_resolucion: 'Daño leve comprobado con las evidencias.' };",
                   "const envelope = { event_id: pm.variables.replaceIn('{{$guid}}'), event_type: 'IncidenciaResuelta', event_version: 1, aggregate_version: Date.now(),",
-                  "  aggregate_id: pm.collectionVariables.get('incidencia_id'), occurred_at: new Date().toISOString(), correlation_id: 'postman', payload };",
+                  "  aggregate_id: pm.variables.get('incidencia_id'), occurred_at: new Date().toISOString(), correlation_id: 'postman', payload };",
                   "pm.variables.set('rabbit_body', JSON.stringify({ properties: { content_type: 'application/json' }, routing_key: 'evidencias.incidencia-resuelta.v1', payload: JSON.stringify(envelope), payload_encoding: 'string' }));"
                 ]
               }
@@ -429,9 +515,9 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const payload = { reserva_id: pm.collectionVariables.get('reserva_id'), solicitud_id: pm.variables.replaceIn('{{$guid}}') };",
+                  "const payload = { reserva_id: pm.variables.get('reserva_id'), solicitud_id: pm.variables.replaceIn('{{$guid}}') };",
                   "const envelope = { event_id: pm.variables.replaceIn('{{$guid}}'), event_type: 'ReservaCancelada', event_version: 1, aggregate_version: Date.now(),",
-                  "  aggregate_id: pm.collectionVariables.get('reserva_id'), occurred_at: new Date().toISOString(), correlation_id: 'postman', payload };",
+                  "  aggregate_id: pm.variables.get('reserva_id'), occurred_at: new Date().toISOString(), correlation_id: 'postman', payload };",
                   "pm.variables.set('rabbit_body', JSON.stringify({ properties: { content_type: 'application/json' }, routing_key: 'reservas.cancelada.v1', payload: JSON.stringify(envelope), payload_encoding: 'string' }));"
                 ]
               }

@@ -20,4 +20,10 @@ docker compose logs notifications --tail 100
 docker compose down
 ```
 
-La colección `docs/postman/lendup-notifications.postman_collection.json` publica eventos simulados en RabbitMQ (consola en el puerto 15674) y luego consulta y marca los avisos.
+La colección `docs/postman/lendup-notifications.postman_collection.json` sigue este orden:
+
+1. **0b. Preparación:** token de Firebase (o pegar `firebase_token`) y `usuario.id` en Identidad.
+2. **1. Eventos simulados:** se publican en RabbitMQ (consola en el puerto 15676). Cada uno debe responder `routed=true`.
+3. **2. Notificaciones:** consultar y marcar los avisos.
+
+Se corrió con newman sobre un broker compartido con Pagos: 13/13 verificaciones. También se comprobó que los avisos *Garantía constituida*, *Pago confirmado*, *Reembolso procesado* y *Garantía devuelta* se crean a partir de los eventos que publica Pagos.
