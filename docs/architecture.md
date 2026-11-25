@@ -8,6 +8,8 @@ Tecnología: C# · ASP.NET Core sobre .NET 10 (LTS), EF Core con Pomelo para MyS
 
 ## Capas y componentes (Fig. 20)
 
+![Componentes](diagrams/componentes.png)
+
 ```
 src/LendUp.Notifications.Api
 ├── Domain           Notification (agregado), NotificationValidator, ReminderPolicy, enums
