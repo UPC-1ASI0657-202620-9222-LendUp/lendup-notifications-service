@@ -4,8 +4,8 @@ Microservicio C# · ASP.NET Core (.NET 10 LTS) para el bounded context de Notifi
 
 ## Estado y límites
 
-- **No publica eventos.** Consume `reservas.solicitud-creada.v1`, `reservas.confirmada.v1`, `reservas.cancelada.v1`, `pagos.*.v1` y, cuando existan, los eventos de Préstamos y Evidencias (routing keys configurables; contratos propuestos en `contracts/events/v1`). Ver [eventos](docs/events.md).
-- **Identidad:** UID → `usuario_id` con `IDENTITY_FIREBASE_USER_URI_TEMPLATE` (igual que Pagos) y `usuario_id` → correo con `IDENTITY_USER_EMAIL_URI_TEMPLATE`. Ambos contratos están pendientes con ese equipo. Sin el primero, las rutas responden `503`.
+- **No publica eventos.** Consume los de Reservas (solicitud creada, rechazada y cancelada; reserva confirmada y cancelada), `pagos.*.v1`, el ciclo completo de Préstamos, la calificación registrada de Reputación y, cuando exista su microservicio, las incidencias de Evidencias. Ver [eventos](docs/events.md).
+- **Identidad:** UID → `usuario_id` con `IDENTITY_FIREBASE_USER_URI_TEMPLATE` (igual que Pagos) y `usuario_id` → correo con `IDENTITY_USER_EMAIL_URI_TEMPLATE`. Ambos contratos ya los publica Identidad (`/internal/v1/identidad/...`, con su token de servicio). Sin el primero, las rutas responden `503`.
 - **Correo:** con `SENDGRID_API_KEY` se envía por SendGrid con reintentos; sin ella (local) el correo se registra en el log.
 - **EF Core 9 + Pomelo 9** sobre .NET 10, porque Pomelo aún no publica versión para EF Core 10 ([ADR 0001](docs/decisions/0001-dotnet-stack-and-pomelo.md)).
 

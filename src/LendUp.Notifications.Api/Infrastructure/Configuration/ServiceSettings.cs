@@ -60,6 +60,7 @@ public sealed record ServiceSettings(
                 LoanFinished = S("LOAN_FINISHED_ROUTING_KEY", "prestamos.finalizado.v1"),
                 IncidentReported = S("INCIDENT_REPORTED_ROUTING_KEY", "evidencias.incidencia-reportada.v1"),
                 IncidentResolved = S("INCIDENT_RESOLVED_ROUTING_KEY", "evidencias.incidencia-resuelta.v1"),
+                RatingRegistered = S("RATING_REGISTERED_ROUTING_KEY", "reputation.rating-registered.v1"),
             });
     }
 }

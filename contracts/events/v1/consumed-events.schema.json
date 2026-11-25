@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://lendup.example/contracts/events/v1/notifications-consumed-events.schema.json",
   "title": "Events consumed by Notifications v1",
-  "description": "Envelope estándar de lendup.domain.events. Notificaciones no publica eventos. Reservas y Pagos ya publican los suyos; Préstamos y Evidencias son contratos PROPUESTOS (productor aún inexistente, routing keys configurables). El consumidor despacha por routing key.",
+  "description": "Envelope estándar de lendup.domain.events. Notificaciones no publica eventos. Reservas, Pagos, Préstamos y Reputación ya publican los suyos (Reputación sin payload, con sus campos en la raíz); los de Evidencias son contratos PROPUESTOS (aún sin microservicio). El consumidor despacha por routing key.",
   "type": "object",
   "required": ["event_id", "event_type", "event_version", "occurred_at", "payload"],
   "properties": {
@@ -17,9 +17,14 @@
   },
   "$defs": {
     "solicitudCreada": {
-      "description": "reservas.solicitud-creada.v1 (Reservas, disponible). Avisa al prestamista.",
-      "type": "object", "required": ["solicitud_id", "prestamista_usuario_id"],
+      "description": "reservas.solicitud-creada.v1 (Reservas, disponible). Avisa al prestamista y confirma al prestatario.",
+      "type": "object", "required": ["solicitud_id", "prestamista_usuario_id", "prestatario_usuario_id"],
       "properties": { "solicitud_id": { "type": "string", "format": "uuid" }, "prestamista_usuario_id": { "type": "string", "format": "uuid" }, "prestatario_usuario_id": { "type": "string", "format": "uuid" } }
+    },
+    "solicitudCerrada": {
+      "description": "reservas.solicitud-rechazada.v1 y reservas.solicitud-cancelada.v1 (Reservas, disponibles). El destinatario sale de los avisos previos de la solicitud.",
+      "type": "object", "required": ["solicitud_id"],
+      "properties": { "solicitud_id": { "type": "string", "format": "uuid" }, "motivo_rechazo": { "type": "string" }, "motivo_cancelacion": { "type": "string" }, "cancelada_por_usuario_id": { "type": "string", "format": "uuid" } }
     },
     "reservaConfirmada": {
       "description": "reservas.confirmada.v1 (Reservas, disponible). Avisa a ambos y programa recordatorios de entrega y devolución (RF22).",
@@ -38,7 +43,7 @@
       "properties": { "reserva_id": { "type": "string", "format": "uuid" } }
     },
     "pagos": {
-      "description": "pagos.*.v1 (lendup-payments-service, disponible): PagoConfirmado, PagoRechazado, GarantiaConstituida, TarifaLiberada, GarantiaDevuelta, GarantiaRetenida, ReembolsoProcesado. Ver payments-events.schema.json de Pagos. Campos usados aquí:",
+      "description": "pagos.*.v1 (lendup-payments-service, disponible): PagoConfirmado, PagoRechazado, GarantiaConstituida, TarifaLiberada, GarantiaDevuelta, GarantiaRetenida, ReembolsoProcesado, ReembolsoRechazado. Ver payments-events.schema.json de Pagos. Campos usados aquí:",
       "type": "object", "required": ["prestatario_usuario_id", "prestamista_usuario_id"],
       "properties": {
         "transaccion_id": { "type": "string", "format": "uuid" },
@@ -52,14 +57,19 @@
       }
     },
     "prestamo": {
-      "description": "PENDIENTE (Préstamos). PrestamoActivado (LOAN_ACTIVATED_ROUTING_KEY=prestamos.activado.v1) y PrestamoFinalizado (LOAN_FINISHED_ROUTING_KEY=prestamos.finalizado.v1). Deben traer los participantes, como los eventos de Pagos.",
+      "description": "Disponibles (Préstamos): ObjetoEntregado, PrestamoActivado, DevolucionRegistrada, PrestamoVencido (usa devolucion_vigente_en), PrestamoFinalizado y CancelacionRechazada (usa motivo). Con reserva_id se anulan los recordatorios que ya no corresponden.",
       "type": "object", "required": ["prestamo_id", "prestatario_usuario_id", "prestamista_usuario_id"],
-      "properties": { "prestamo_id": { "type": "string", "format": "uuid" }, "prestatario_usuario_id": { "type": "string", "format": "uuid" }, "prestamista_usuario_id": { "type": "string", "format": "uuid" } }
+      "properties": { "prestamo_id": { "type": "string", "format": "uuid" }, "reserva_id": { "type": "string", "format": "uuid" }, "devolucion_vigente_en": { "type": "string", "format": "local-date-time" }, "motivo": { "type": "string" }, "prestatario_usuario_id": { "type": "string", "format": "uuid" }, "prestamista_usuario_id": { "type": "string", "format": "uuid" } }
     },
-    "extensionAceptada": {
-      "description": "PENDIENTE (Préstamos). EXTENSION_ACCEPTED_ROUTING_KEY=prestamos.extension-aceptada.v1.",
+    "cambioDeFecha": {
+      "description": "Disponibles (Préstamos): ExtensionSolicitada, ExtensionAceptada, ExtensionRechazada, ReprogramacionPropuesta, ReprogramacionRechazada y FechaDevolucionActualizada (esta exige reserva_id y devolucion_vigente_en).",
       "type": "object", "required": ["cambio_fecha_prestamo_id", "prestatario_usuario_id", "prestamista_usuario_id"],
-      "properties": { "prestamo_id": { "type": "string", "format": "uuid" }, "cambio_fecha_prestamo_id": { "type": "string", "format": "uuid" }, "prestatario_usuario_id": { "type": "string", "format": "uuid" }, "prestamista_usuario_id": { "type": "string", "format": "uuid" } }
+      "properties": { "prestamo_id": { "type": "string", "format": "uuid" }, "reserva_id": { "type": "string", "format": "uuid" }, "cambio_fecha_prestamo_id": { "type": "string", "format": "uuid" }, "fecha_propuesta_en": { "type": "string", "format": "local-date-time" }, "devolucion_vigente_en": { "type": "string", "format": "local-date-time" }, "costo_adicional": { "type": "number" }, "motivo_rechazo": { "type": "string" }, "prestatario_usuario_id": { "type": "string", "format": "uuid" }, "prestamista_usuario_id": { "type": "string", "format": "uuid" } }
+    },
+    "calificacionRegistrada": {
+      "description": "Disponible (Reputación). RATING_REGISTERED_ROUTING_KEY=reputation.rating-registered.v1. Estos campos van en la raíz del mensaje, sin payload.",
+      "type": "object", "required": ["evaluacion_id", "prestamo_id", "evaluado_usuario_id", "puntaje"],
+      "properties": { "evaluacion_id": { "type": "string", "format": "uuid" }, "prestamo_id": { "type": "string", "format": "uuid" }, "evaluado_usuario_id": { "type": "string", "format": "uuid" }, "puntaje": { "type": "integer", "minimum": 1, "maximum": 5 } }
     },
     "incidencia": {
       "description": "PENDIENTE (Evidencias). IncidenciaReportada (INCIDENT_REPORTED_ROUTING_KEY=evidencias.incidencia-reportada.v1) e IncidenciaResuelta (INCIDENT_RESOLVED_ROUTING_KEY=evidencias.incidencia-resuelta.v1). justificacion_resolucion es opcional y se usa como mensaje, igual que el monolito.",

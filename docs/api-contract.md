@@ -24,9 +24,9 @@ Cada fila trae las columnas de la tabla `notificaciones`: `id`, `destinatario_us
 
 - La lista excluye recordatorios `PROGRAMADA` (todavía no deben verse) y `CANCELADA`, y se ordena por `creada_en` descendente (el monolito no ordenaba).
 - Fechas en UTC con `Z`, como Reservas y Pagos.
-- Nuevos `origen_tipo` de la Fig. 13: `SOLICITUD`, `PAGO`, `GARANTIA` y `EXTENSION`. El frontend hoy solo enlaza `RESERVA`, `PRESTAMO` e `INCIDENCIA`; los demás llevan a `/notifications` (ver `PENDIENTES.md`, sección B).
+- Nuevos `origen_tipo` de la Fig. 13: `SOLICITUD`, `PAGO`, `GARANTIA` y `EXTENSION`. Las reprogramaciones usan `EXTENSION` con el id del cambio de fecha.
 
-## Contratos internos pendientes con Identidad
+## Contratos internos con Identidad
 
 - `IDENTITY_FIREBASE_USER_URI_TEMPLATE` con `{uid}`: con `IDENTITY_SERVICE_TOKEN` se espera `{ "usuario_id": "UUID" }`; sin token se reenvía el ID token del usuario (en local, `GET /api/v1/estudiantes/me` del monolito, que devuelve `{ "usuario": { "id": "UUID" } }`). Igual que Pagos.
-- `IDENTITY_USER_EMAIL_URI_TEMPLATE` con `{usuario_id}` y token de servicio: `{ "correo": "..." }` (o `correo_institucional`). Sin este contrato, con SendGrid configurado el correo se reintenta y termina `FALLIDO`; sin SendGrid se registra en el log.
+- `IDENTITY_USER_EMAIL_URI_TEMPLATE` con `{usuario_id}` y token de servicio: `{ "correo_institucional": "..." }`, como lo publica Identidad en `/internal/v1/identidad/usuarios/{usuario_id}/correo`. Sin este contrato, con SendGrid configurado el correo se reintenta y termina `FALLIDO`; sin SendGrid se registra en el log.

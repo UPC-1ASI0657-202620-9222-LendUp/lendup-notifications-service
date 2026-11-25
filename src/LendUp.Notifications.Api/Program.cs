@@ -103,6 +103,8 @@ if (settings.Database.MigrateOnStartup)
 app.UseExceptionHandler();
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseCors();
+// La página de Swagger es un recurso estático: pública va antes de exigir autenticación; si no, la protege la política por defecto.
+if (settings.Web is { SwaggerEnabled: true, SwaggerPublic: true }) app.UseSwaggerUI();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
@@ -112,7 +114,7 @@ if (settings.Web.SwaggerEnabled)
 {
     var swagger = app.MapSwagger();
     if (settings.Web.SwaggerPublic) swagger.AllowAnonymous();
-    app.UseSwaggerUI();
+    else app.UseSwaggerUI();
 }
 
 await app.RunAsync();

@@ -43,6 +43,8 @@ public sealed class NotificationApplicationService(
             if (await AddIfAbsentAsync(Notification.ForEvent(draft.RecipientUserId, draft.NotificationKey, draft.OriginType, draft.OriginId,
                     sourceEventId, draft.Title, draft.Message, true, now), ct)) created++;
         }
+        if (plan.Request is { } request) created += await NotifyRequestAsync(request, sourceEventId, now, ct);
+        if (plan.Reminders is { } change) await reminders.ApplyChangeAsync(change, sourceEventId, ct);
         if (plan.Schedule is { } schedule) await reminders.ScheduleForReservationAsync(schedule, sourceEventId, ct);
         if (plan.CancelledReservationId is { } reservationId)
         {
@@ -81,6 +83,20 @@ public sealed class NotificationApplicationService(
             await repository.SaveChangesAsync(ct);
         }
         return sent;
+    }
+
+    private async Task<int> NotifyRequestAsync(RequestFollowUp request, string sourceEventId, DateTime now, CancellationToken ct)
+    {
+        var known = $"{request.KnownBy}:{request.RequestId}";
+        var recipients = (await repository.FindByOriginAsync(OriginType.Solicitud, request.RequestId, ct)).Where(n => n.NotificationKey == known).Select(n => n.RecipientUserId).Distinct().ToList();
+        if (recipients.Count == 0) logger.LogWarning("Solicitud {RequestId} sin avisos previos; no se conoce al destinatario de {KeyType}", request.RequestId, request.KeyType);
+        var created = 0;
+        foreach (var recipient in recipients)
+        {
+            if (await AddIfAbsentAsync(Notification.ForEvent(recipient, $"{request.KeyType}:{request.RequestId}", OriginType.Solicitud, request.RequestId, sourceEventId,
+                    request.Title, request.Message, true, now), ct)) created++;
+        }
+        return created;
     }
 
     private async Task<bool> AddIfAbsentAsync(Notification notification, CancellationToken ct)

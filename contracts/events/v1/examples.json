@@ -32,10 +32,10 @@
       "prestamista_usuario_id": "55555555-5555-4555-8555-555555555555", "garantia_id": "d4444444-4444-4444-8444-444444444444",
       "transaccion_id": "e5555555-5555-4555-8555-555555555555", "estado_garantia": "DEVUELTA", "moneda": "PEN", "monto_devuelto": 50.00, "monto_devuelto_total": 50.00 }
   },
-  "prestamos.activado.v1 (pendiente)": {
+  "prestamos.activado.v1": {
     "event_id": "10000000-0000-4000-8000-000000000006", "event_type": "PrestamoActivado", "event_version": 1, "aggregate_version": 3,
     "aggregate_id": "c3333333-3333-4333-8333-333333333333", "occurred_at": "2026-11-10T09:30:00Z", "correlation_id": "req-006",
-    "payload": { "prestamo_id": "c3333333-3333-4333-8333-333333333333", "prestatario_usuario_id": "66666666-6666-4666-8666-666666666666", "prestamista_usuario_id": "55555555-5555-4555-8555-555555555555" }
+    "payload": { "prestamo_id": "c3333333-3333-4333-8333-333333333333", "reserva_id": "22222222-2222-4222-8222-222222222222", "prestatario_usuario_id": "66666666-6666-4666-8666-666666666666", "prestamista_usuario_id": "55555555-5555-4555-8555-555555555555" }
   },
   "evidencias.incidencia-resuelta.v1 (pendiente)": {
     "event_id": "10000000-0000-4000-8000-000000000007", "event_type": "IncidenciaResuelta", "event_version": 1, "aggregate_version": 3,
@@ -43,5 +43,40 @@
     "payload": { "incidencia_id": "99999999-9999-4999-8999-999999999999", "prestamo_id": "c3333333-3333-4333-8333-333333333333",
       "prestatario_usuario_id": "66666666-6666-4666-8666-666666666666", "prestamista_usuario_id": "55555555-5555-4555-8555-555555555555",
       "decision_garantia": "AFECTACION_PARCIAL", "monto_garantia_afectado": 20.00, "justificacion_resolucion": "Daño leve comprobado con las evidencias." }
+  },
+  "reservas.solicitud-rechazada.v1": {
+    "event_id": "10000000-0000-4000-8000-000000000008", "event_type": "SolicitudRechazada", "event_version": 1, "aggregate_version": 4,
+    "aggregate_id": "33333333-3333-4333-8333-333333333333", "occurred_at": "2026-11-01T14:30:00Z", "correlation_id": "req-008",
+    "payload": { "solicitud_id": "33333333-3333-4333-8333-333333333333", "motivo_rechazo": "No estará disponible" }
+  },
+  "prestamos.objeto-entregado.v1": {
+    "event_id": "10000000-0000-4000-8000-000000000009", "event_type": "ObjetoEntregado", "event_version": 1, "aggregate_version": 4,
+    "aggregate_id": "c3333333-3333-4333-8333-333333333333", "occurred_at": "2026-11-10T14:00:00Z", "correlation_id": "req-009",
+    "payload": { "prestamo_id": "c3333333-3333-4333-8333-333333333333", "reserva_id": "22222222-2222-4222-8222-222222222222", "prestatario_usuario_id": "66666666-6666-4666-8666-666666666666", "prestamista_usuario_id": "55555555-5555-4555-8555-555555555555", "entrega_registrada_en": "2026-11-10T14:00:00Z" }
+  },
+  "prestamos.extension-solicitada.v1": {
+    "event_id": "10000000-0000-4000-8000-000000000010", "event_type": "ExtensionSolicitada", "event_version": 1, "aggregate_version": 4,
+    "aggregate_id": "c3333333-3333-4333-8333-333333333333", "occurred_at": "2026-11-11T10:00:00Z", "correlation_id": "req-010",
+    "payload": { "prestamo_id": "c3333333-3333-4333-8333-333333333333", "reserva_id": "22222222-2222-4222-8222-222222222222", "prestatario_usuario_id": "66666666-6666-4666-8666-666666666666", "prestamista_usuario_id": "55555555-5555-4555-8555-555555555555", "cambio_fecha_prestamo_id": "88888888-8888-4888-8888-888888888888", "fecha_propuesta_en": "2026-11-14T09:00:00", "costo_adicional": 40.00, "moneda": "PEN" }
+  },
+  "prestamos.fecha-devolucion-actualizada.v1": {
+    "event_id": "10000000-0000-4000-8000-000000000011", "event_type": "FechaDevolucionActualizada", "event_version": 1, "aggregate_version": 4,
+    "aggregate_id": "c3333333-3333-4333-8333-333333333333", "occurred_at": "2026-11-11T12:00:00Z", "correlation_id": "req-011",
+    "payload": { "prestamo_id": "c3333333-3333-4333-8333-333333333333", "reserva_id": "22222222-2222-4222-8222-222222222222", "prestatario_usuario_id": "66666666-6666-4666-8666-666666666666", "prestamista_usuario_id": "55555555-5555-4555-8555-555555555555", "cambio_fecha_prestamo_id": "88888888-8888-4888-8888-888888888888", "tipo": "EXTENSION", "devolucion_anterior_en": "2026-11-12T09:00:00", "devolucion_vigente_en": "2026-11-14T09:00:00" }
+  },
+  "prestamos.vencido.v1": {
+    "event_id": "10000000-0000-4000-8000-000000000012", "event_type": "PrestamoVencido", "event_version": 1, "aggregate_version": 4,
+    "aggregate_id": "c3333333-3333-4333-8333-333333333333", "occurred_at": "2026-11-14T14:00:30Z", "correlation_id": "req-012",
+    "payload": { "prestamo_id": "c3333333-3333-4333-8333-333333333333", "reserva_id": "22222222-2222-4222-8222-222222222222", "prestatario_usuario_id": "66666666-6666-4666-8666-666666666666", "prestamista_usuario_id": "55555555-5555-4555-8555-555555555555", "vencido_en": "2026-11-14T14:00:30Z", "devolucion_vigente_en": "2026-11-14T09:00:00" }
+  },
+  "pagos.reembolso-rechazado.v1": {
+    "event_id": "10000000-0000-4000-8000-000000000013", "event_type": "ReembolsoRechazado", "event_version": 1, "aggregate_version": 4,
+    "aggregate_id": "b2222222-2222-4222-8222-222222222222", "occurred_at": "2026-11-02T16:00:00Z", "correlation_id": "req-013",
+    "payload": { "prestamo_id": "c3333333-3333-4333-8333-333333333333", "reserva_id": "22222222-2222-4222-8222-222222222222", "prestatario_usuario_id": "66666666-6666-4666-8666-666666666666", "prestamista_usuario_id": "55555555-5555-4555-8555-555555555555", "transaccion_id": "b2222222-2222-4222-8222-222222222222", "tipo": "REEMBOLSO_TARIFA", "estado": "FALLIDA", "monto": 40.00, "moneda": "PEN", "motivo": "refund_rejected" }
+  },
+  "reputation.rating-registered.v1": {
+    "event_id": "10000000-0000-4000-8000-000000000014", "correlation_id": "10000000-0000-4000-8000-000000000014", "event_type": "CalificacionRegistrada", "event_version": 1,
+    "evaluacion_id": "77777777-7777-4777-8777-777777777777", "prestamo_id": "c3333333-3333-4333-8333-333333333333", "evaluador_usuario_id": "55555555-5555-4555-8555-555555555555",
+    "evaluado_usuario_id": "66666666-6666-4666-8666-666666666666", "puntaje": 5, "registrada_en": "2026-11-15T10:00:00Z"
   }
 }
