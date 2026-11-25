@@ -64,6 +64,10 @@
     {
       "key": "test_password",
       "value": "PEGAR_CONTRASENA_DE_PRUEBA"
+    },
+    {
+      "key": "solicitud_id",
+      "value": "33333333-3333-4333-8333-333333333333"
     }
   ],
   "item": [
@@ -191,7 +195,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const payload = { solicitud_id: pm.variables.replaceIn('{{$guid}}'), publicacion_id: pm.variables.replaceIn('{{$guid}}'), prestatario_usuario_id: pm.variables.get('prestatario_usuario_id'), prestamista_usuario_id: pm.variables.get('prestamista_usuario_id'), desde: '2026-11-20T09:00:00', hasta: '2026-11-22T09:00:00' };",
+                  "pm.collectionVariables.set('solicitud_id', pm.variables.replaceIn('{{$guid}}')); const payload = { solicitud_id: pm.collectionVariables.get('solicitud_id'), publicacion_id: pm.variables.replaceIn('{{$guid}}'), prestatario_usuario_id: pm.variables.get('prestatario_usuario_id'), prestamista_usuario_id: pm.variables.get('prestamista_usuario_id'), desde: '2026-11-20T09:00:00', hasta: '2026-11-22T09:00:00' };",
                   "const envelope = { event_id: pm.variables.replaceIn('{{$guid}}'), event_type: 'SolicitudCreada', event_version: 1, aggregate_version: Date.now(),",
                   "  aggregate_id: pm.variables.get('reserva_id'), occurred_at: new Date().toISOString(), correlation_id: 'postman', payload };",
                   "pm.variables.set('rabbit_body', JSON.stringify({ properties: { content_type: 'application/json' }, routing_key: 'reservas.solicitud-creada.v1', payload: JSON.stringify(envelope), payload_encoding: 'string' }));"
@@ -235,6 +239,59 @@
               "raw": "{{rabbit_body}}"
             },
             "description": "Publica en RabbitMQ (API de administración) un mensaje de contracts/events/v1/examples.json."
+          }
+        },
+        {
+          "name": "SolicitudRechazada (Reservas)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = { solicitud_id: pm.variables.get('solicitud_id'), motivo_rechazo: 'No estará disponible' };",
+                  "const envelope = { event_id: pm.variables.replaceIn('{{$guid}}'), event_type: 'SolicitudRechazada', event_version: 1, aggregate_version: Date.now(), aggregate_id: pm.variables.get('solicitud_id'), occurred_at: new Date().toISOString(), correlation_id: 'postman', payload };",
+                  "pm.variables.set('rabbit_body', JSON.stringify({ properties: { content_type: 'application/json' }, routing_key: 'reservas.solicitud-rechazada.v1', payload: JSON.stringify(envelope), payload_encoding: 'string' }));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Publicado y enrutado a una cola', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().routed).to.eql(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{rabbit_user}}"
+                },
+                {
+                  "key": "password",
+                  "value": "{{rabbit_pass}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{rabbit_url}}/api/exchanges/%2F/lendup.domain.events/publish",
+            "body": {
+              "mode": "raw",
+              "raw": "{{rabbit_body}}"
+            },
+            "description": "Reservas solo envía solicitud_id: el destinatario sale de los avisos previos de esa solicitud."
           }
         },
         {
@@ -400,7 +457,7 @@
           }
         },
         {
-          "name": "PrestamoActivado (pendiente en Préstamos)",
+          "name": "PrestamoActivado (Préstamos)",
           "event": [
             {
               "listen": "prerequest",
@@ -454,7 +511,378 @@
           }
         },
         {
-          "name": "IncidenciaResuelta (pendiente en Evidencias)",
+          "name": "ObjetoEntregado (Préstamos)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = { prestamo_id: pm.variables.get('prestamo_id'), reserva_id: pm.variables.get('reserva_id'), prestatario_usuario_id: pm.variables.get('prestatario_usuario_id'), prestamista_usuario_id: pm.variables.get('prestamista_usuario_id') };",
+                  "const envelope = { event_id: pm.variables.replaceIn('{{$guid}}'), event_type: 'ObjetoEntregado', event_version: 1, aggregate_version: Date.now(), aggregate_id: pm.variables.get('prestamo_id'), occurred_at: new Date().toISOString(), correlation_id: 'postman', payload };",
+                  "pm.variables.set('rabbit_body', JSON.stringify({ properties: { content_type: 'application/json' }, routing_key: 'prestamos.objeto-entregado.v1', payload: JSON.stringify(envelope), payload_encoding: 'string' }));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Publicado y enrutado a una cola', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().routed).to.eql(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{rabbit_user}}"
+                },
+                {
+                  "key": "password",
+                  "value": "{{rabbit_pass}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{rabbit_url}}/api/exchanges/%2F/lendup.domain.events/publish",
+            "body": {
+              "mode": "raw",
+              "raw": "{{rabbit_body}}"
+            },
+            "description": "Publica en RabbitMQ (API de administración) un mensaje de contracts/events/v1/examples.json."
+          }
+        },
+        {
+          "name": "ExtensionSolicitada (Préstamos)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = { prestamo_id: pm.variables.get('prestamo_id'), reserva_id: pm.variables.get('reserva_id'), prestatario_usuario_id: pm.variables.get('prestatario_usuario_id'), prestamista_usuario_id: pm.variables.get('prestamista_usuario_id'), cambio_fecha_prestamo_id: pm.variables.replaceIn('{{$guid}}'), fecha_propuesta_en: '2027-01-10T09:00:00', costo_adicional: 40.00, moneda: 'PEN' };",
+                  "const envelope = { event_id: pm.variables.replaceIn('{{$guid}}'), event_type: 'ExtensionSolicitada', event_version: 1, aggregate_version: Date.now(), aggregate_id: pm.variables.get('prestamo_id'), occurred_at: new Date().toISOString(), correlation_id: 'postman', payload };",
+                  "pm.variables.set('rabbit_body', JSON.stringify({ properties: { content_type: 'application/json' }, routing_key: 'prestamos.extension-solicitada.v1', payload: JSON.stringify(envelope), payload_encoding: 'string' }));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Publicado y enrutado a una cola', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().routed).to.eql(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{rabbit_user}}"
+                },
+                {
+                  "key": "password",
+                  "value": "{{rabbit_pass}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{rabbit_url}}/api/exchanges/%2F/lendup.domain.events/publish",
+            "body": {
+              "mode": "raw",
+              "raw": "{{rabbit_body}}"
+            },
+            "description": "Publica en RabbitMQ (API de administración) un mensaje de contracts/events/v1/examples.json."
+          }
+        },
+        {
+          "name": "FechaDevolucionActualizada (Préstamos) - mueve el recordatorio",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = { prestamo_id: pm.variables.get('prestamo_id'), reserva_id: pm.variables.get('reserva_id'), prestatario_usuario_id: pm.variables.get('prestatario_usuario_id'), prestamista_usuario_id: pm.variables.get('prestamista_usuario_id'), cambio_fecha_prestamo_id: pm.variables.replaceIn('{{$guid}}'), tipo: 'EXTENSION', devolucion_vigente_en: '2027-01-10T09:00:00' };",
+                  "const envelope = { event_id: pm.variables.replaceIn('{{$guid}}'), event_type: 'FechaDevolucionActualizada', event_version: 1, aggregate_version: Date.now(), aggregate_id: pm.variables.get('prestamo_id'), occurred_at: new Date().toISOString(), correlation_id: 'postman', payload };",
+                  "pm.variables.set('rabbit_body', JSON.stringify({ properties: { content_type: 'application/json' }, routing_key: 'prestamos.fecha-devolucion-actualizada.v1', payload: JSON.stringify(envelope), payload_encoding: 'string' }));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Publicado y enrutado a una cola', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().routed).to.eql(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{rabbit_user}}"
+                },
+                {
+                  "key": "password",
+                  "value": "{{rabbit_pass}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{rabbit_url}}/api/exchanges/%2F/lendup.domain.events/publish",
+            "body": {
+              "mode": "raw",
+              "raw": "{{rabbit_body}}"
+            },
+            "description": "Publica en RabbitMQ (API de administración) un mensaje de contracts/events/v1/examples.json."
+          }
+        },
+        {
+          "name": "PrestamoVencido (Préstamos)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = { prestamo_id: pm.variables.get('prestamo_id'), reserva_id: pm.variables.get('reserva_id'), prestatario_usuario_id: pm.variables.get('prestatario_usuario_id'), prestamista_usuario_id: pm.variables.get('prestamista_usuario_id'), vencido_en: new Date().toISOString(), devolucion_vigente_en: '2027-01-10T09:00:00' };",
+                  "const envelope = { event_id: pm.variables.replaceIn('{{$guid}}'), event_type: 'PrestamoVencido', event_version: 1, aggregate_version: Date.now(), aggregate_id: pm.variables.get('prestamo_id'), occurred_at: new Date().toISOString(), correlation_id: 'postman', payload };",
+                  "pm.variables.set('rabbit_body', JSON.stringify({ properties: { content_type: 'application/json' }, routing_key: 'prestamos.vencido.v1', payload: JSON.stringify(envelope), payload_encoding: 'string' }));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Publicado y enrutado a una cola', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().routed).to.eql(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{rabbit_user}}"
+                },
+                {
+                  "key": "password",
+                  "value": "{{rabbit_pass}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{rabbit_url}}/api/exchanges/%2F/lendup.domain.events/publish",
+            "body": {
+              "mode": "raw",
+              "raw": "{{rabbit_body}}"
+            },
+            "description": "Publica en RabbitMQ (API de administración) un mensaje de contracts/events/v1/examples.json."
+          }
+        },
+        {
+          "name": "DevolucionRegistrada (Préstamos)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = { prestamo_id: pm.variables.get('prestamo_id'), reserva_id: pm.variables.get('reserva_id'), prestatario_usuario_id: pm.variables.get('prestatario_usuario_id'), prestamista_usuario_id: pm.variables.get('prestamista_usuario_id') };",
+                  "const envelope = { event_id: pm.variables.replaceIn('{{$guid}}'), event_type: 'DevolucionRegistrada', event_version: 1, aggregate_version: Date.now(), aggregate_id: pm.variables.get('prestamo_id'), occurred_at: new Date().toISOString(), correlation_id: 'postman', payload };",
+                  "pm.variables.set('rabbit_body', JSON.stringify({ properties: { content_type: 'application/json' }, routing_key: 'prestamos.devolucion-registrada.v1', payload: JSON.stringify(envelope), payload_encoding: 'string' }));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Publicado y enrutado a una cola', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().routed).to.eql(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{rabbit_user}}"
+                },
+                {
+                  "key": "password",
+                  "value": "{{rabbit_pass}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{rabbit_url}}/api/exchanges/%2F/lendup.domain.events/publish",
+            "body": {
+              "mode": "raw",
+              "raw": "{{rabbit_body}}"
+            },
+            "description": "Publica en RabbitMQ (API de administración) un mensaje de contracts/events/v1/examples.json."
+          }
+        },
+        {
+          "name": "CalificacionRegistrada (Reputación, mensaje plano)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = {  };",
+                  "const envelope = { event_id: pm.variables.replaceIn('{{$guid}}'), correlation_id: pm.variables.replaceIn('{{$guid}}'), event_type: 'CalificacionRegistrada', event_version: 1, evaluacion_id: pm.variables.replaceIn('{{$guid}}'), prestamo_id: pm.variables.get('prestamo_id'), evaluador_usuario_id: pm.variables.get('prestamista_usuario_id'), evaluado_usuario_id: pm.variables.get('prestatario_usuario_id'), puntaje: 5, registrada_en: new Date().toISOString() };",
+                  "pm.variables.set('rabbit_body', JSON.stringify({ properties: { content_type: 'application/json' }, routing_key: 'reputation.rating-registered.v1', payload: JSON.stringify(envelope), payload_encoding: 'string' }));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Publicado y enrutado a una cola', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().routed).to.eql(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{rabbit_user}}"
+                },
+                {
+                  "key": "password",
+                  "value": "{{rabbit_pass}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{rabbit_url}}/api/exchanges/%2F/lendup.domain.events/publish",
+            "body": {
+              "mode": "raw",
+              "raw": "{{rabbit_body}}"
+            },
+            "description": "Reputación publica sus campos en la raíz, sin payload."
+          }
+        },
+        {
+          "name": "ReembolsoRechazado (Pagos)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = { prestamo_id: pm.variables.get('prestamo_id'), reserva_id: pm.variables.get('reserva_id'), prestatario_usuario_id: pm.variables.get('prestatario_usuario_id'), prestamista_usuario_id: pm.variables.get('prestamista_usuario_id'), transaccion_id: pm.variables.replaceIn('{{$guid}}'), tipo: 'REEMBOLSO_TARIFA', monto: 40.00, moneda: 'PEN' };",
+                  "const envelope = { event_id: pm.variables.replaceIn('{{$guid}}'), event_type: 'ReembolsoRechazado', event_version: 1, aggregate_version: Date.now(), aggregate_id: pm.variables.get('prestamo_id'), occurred_at: new Date().toISOString(), correlation_id: 'postman', payload };",
+                  "pm.variables.set('rabbit_body', JSON.stringify({ properties: { content_type: 'application/json' }, routing_key: 'pagos.reembolso-rechazado.v1', payload: JSON.stringify(envelope), payload_encoding: 'string' }));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Publicado y enrutado a una cola', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().routed).to.eql(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{rabbit_user}}"
+                },
+                {
+                  "key": "password",
+                  "value": "{{rabbit_pass}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{rabbit_url}}/api/exchanges/%2F/lendup.domain.events/publish",
+            "body": {
+              "mode": "raw",
+              "raw": "{{rabbit_body}}"
+            },
+            "description": "Publica en RabbitMQ (API de administración) un mensaje de contracts/events/v1/examples.json."
+          }
+        },
+        {
+          "name": "IncidenciaResuelta (Evidencias, aún sin microservicio)",
           "event": [
             {
               "listen": "prerequest",

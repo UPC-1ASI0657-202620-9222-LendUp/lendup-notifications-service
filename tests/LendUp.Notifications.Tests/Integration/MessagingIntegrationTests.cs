@@ -82,6 +82,42 @@ public class MessagingIntegrationTests(ContainersFixture containers) : IClassFix
     }
 
     [SkippableFact]
+    public async Task RechazoDeSolicitudCambioDeFechaYCalificacionFuncionanConBaseYBrokerReales()
+    {
+        Skip.IfNot(DockerAvailability.IsAvailable, "Docker no disponible");
+        await using var factory = new RealInfrastructureFactory(containers);
+        var client = factory.CreateClient();
+        await WaitUntilAsync(async () => (await client.GetAsync("/actuator/health/readiness")).StatusCode == HttpStatusCode.OK);
+
+        Guid borrower = Guid.NewGuid(), lender = Guid.NewGuid(), request = Guid.NewGuid(), reservation = Guid.NewGuid(), loan = Guid.NewGuid(), change = Guid.NewGuid(), last = Guid.NewGuid();
+        var people = new Dictionary<string, object?> { ["prestamista_usuario_id"] = lender.ToString(), ["prestatario_usuario_id"] = borrower.ToString() };
+        Dictionary<string, object?> With(params (string Key, object? Value)[] extra) => new(people.Concat(extra.Select(x => KeyValuePair.Create(x.Key, x.Value))));
+        var returnLocal = DateTime.UtcNow.AddHours(-5).AddDays(9);
+        await PublishAsync("reservas.solicitud-creada.v1", NotificationsFixture.Envelope("SolicitudCreada", With(("solicitud_id", request.ToString())), Guid.NewGuid()));
+        await PublishAsync("reservas.solicitud-rechazada.v1", NotificationsFixture.Envelope("SolicitudRechazada", new Dictionary<string, object> { ["solicitud_id"] = request.ToString(), ["motivo_rechazo"] = "No disponible" }, Guid.NewGuid()));
+        await PublishAsync("reservas.confirmada.v1", NotificationsFixture.Envelope("ReservaConfirmada", With(("reserva_id", reservation.ToString()),
+            ("desde", DateTime.UtcNow.AddHours(-5).AddDays(2).ToString("yyyy-MM-ddTHH:mm:ss")), ("hasta", DateTime.UtcNow.AddHours(-5).AddDays(5).ToString("yyyy-MM-ddTHH:mm:ss"))), Guid.NewGuid()));
+        await PublishAsync("prestamos.fecha-devolucion-actualizada.v1", NotificationsFixture.Envelope("FechaDevolucionActualizada", With(("prestamo_id", loan.ToString()), ("reserva_id", reservation.ToString()),
+            ("cambio_fecha_prestamo_id", change.ToString()), ("devolucion_vigente_en", returnLocal.ToString("yyyy-MM-ddTHH:mm:ss"))), Guid.NewGuid()));
+        await PublishAsync("reputation.rating-registered.v1", Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new Dictionary<string, object>
+        {
+            ["event_id"] = last.ToString(), ["correlation_id"] = last.ToString(), ["event_type"] = "CalificacionRegistrada", ["event_version"] = 1, ["evaluacion_id"] = Guid.NewGuid().ToString(),
+            ["prestamo_id"] = loan.ToString(), ["evaluador_usuario_id"] = lender.ToString(), ["evaluado_usuario_id"] = borrower.ToString(), ["puntaje"] = 4, ["registrada_en"] = "2026-11-25T18:00:00Z",
+        })));
+        await WaitUntilAsync(async () => { await using var db = Db(factory); return await db.ProcessedEvents.AnyAsync(p => p.EventId == last); });
+
+        await using var stored = Db(factory);
+        var mine = await stored.Notifications.Where(n => n.RecipientUserId == borrower).ToListAsync();
+        Assert.Contains(mine, n => n.Title == "Solicitud rechazada" && n.Message.EndsWith("No disponible"));
+        Assert.Contains(mine, n => n.Title == "Nueva fecha de devolución");
+        Assert.Contains(mine, n => n.Title == "Nueva calificación");
+        var reminders = mine.Where(n => n.Title == "Recordatorio de devolución").ToList();
+        Assert.Single(reminders, r => r.State == NotificationState.Cancelada);
+        var moved = Assert.Single(reminders, r => r.State == NotificationState.Programada);
+        Assert.InRange(moved.ScheduledFor!.Value, returnLocal.AddHours(5).AddDays(-1).AddSeconds(-2), returnLocal.AddHours(5).AddDays(-1).AddSeconds(2));
+    }
+
+    [SkippableFact]
     public async Task RecordatorioVencidoSeActivaConLaBaseReal()
     {
         Skip.IfNot(DockerAvailability.IsAvailable, "Docker no disponible");

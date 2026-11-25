@@ -39,6 +39,10 @@ public sealed class EventProcessor(NotificationsDbContext db, NotificationApplic
         });
     }
 
+    /// <summary>Reputación publica sus campos en la raíz, sin payload; los demás contextos usan el envelope estándar.</summary>
+    private static bool UsesStandardEnvelope(string routingKey) =>
+        routingKey.Split('.')[0] is "reservas" or "pagos" or "prestamos" or "evidencias";
+
     public static IntegrationEvent Parse(string routingKey, ReadOnlyMemory<byte> body)
     {
         try
@@ -46,7 +50,7 @@ public sealed class EventProcessor(NotificationsDbContext db, NotificationApplic
             using var document = JsonDocument.Parse(body);
             var root = document.RootElement;
             Guid Guid(string name) => System.Guid.Parse(root.GetProperty(name).GetString()!);
-            var payload = root.GetProperty("payload");
+            var payload = !root.TryGetProperty("payload", out var nested) && !UsesStandardEnvelope(routingKey) ? root : nested;
             if (payload.ValueKind != JsonValueKind.Object) throw new InvalidMessageException("payload debe ser un objeto");
             var aggregateId = root.TryGetProperty("aggregate_id", out var aggregate) && aggregate.ValueKind == JsonValueKind.String
                 ? System.Guid.Parse(aggregate.GetString()!) : System.Guid.Empty;
