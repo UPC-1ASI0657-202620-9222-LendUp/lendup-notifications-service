@@ -59,6 +59,18 @@ public class FrontendContractTests(InMemoryApiFactory factory) : IClassFixture<I
         return n;
     }
 
+    [Theory]
+    [InlineData("true", HttpStatusCode.OK)]
+    [InlineData("false", HttpStatusCode.Unauthorized)]
+    public async Task LaPaginaDeSwaggerSoloSeAbreSinTokenSiEsPublica(string isPublic, HttpStatusCode expected)
+    {
+        await using var swagger = factory.WithWebHostBuilder(b => { b.UseSetting("SWAGGER_ENABLED", "true"); b.UseSetting("SWAGGER_PUBLIC", isPublic); });
+        var client = swagger.CreateClient();
+        Assert.Equal(expected, (await client.GetAsync("/swagger/index.html")).StatusCode);
+        Assert.Equal(expected, (await client.GetAsync("/swagger/v1/swagger.json")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/v1/notificaciones")).StatusCode);
+    }
+
     [Fact]
     public async Task ListaDevuelveLosCamposQueLeeElMapperSinRecordatoriosFuturos()
     {
