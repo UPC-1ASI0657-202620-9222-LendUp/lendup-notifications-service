@@ -36,12 +36,13 @@ Adicionales: `EventNotificationCatalog` (traduce cada evento a avisos en españo
 1. **Evento → aviso (RF48).** `MessageBrokerAdapter` consume `notifications.events.v1` con ack manual. `EventProcessor` abre una transacción: si el `event_id` ya está en `processed_events` lo descarta; si no, crea un aviso `DISPONIBLE` por destinatario y registra el `event_id`, todo junto. Además, `(destinatario_usuario_id, clave_notificacion)` es único: el mismo hecho con otro `event_id` tampoco se duplica.
 2. **Reserva confirmada → recordatorios (RF22).** Se crean 4 recordatorios `PROGRAMADA` (entrega y devolución, para prestatario y prestamista). `programada_para` = fecha de la reserva (hora de Lima convertida a UTC) menos `REMINDER_*_LEAD_HOURS` (24 h por defecto); si ya pasó, sale de inmediato.
 3. **Reserva cancelada.** El evento de Reservas solo trae `reserva_id`; los destinatarios se toman de los avisos ya creados para esa reserva. Se avisa "Reserva cancelada" y los recordatorios pendientes pasan a `CANCELADA`.
-4. **ReminderScheduler.** Cada `REMINDER_SCHEDULER_DELAY_MS` pasa a `DISPONIBLE` los recordatorios vencidos y envía los correos pendientes de avisos visibles.
-5. **Correo.** Todos los avisos llevan `enviar_correo = true`. El correo sale con SendGrid; si falla se reintenta con espera creciente (0, 1, 5, 30 min, 2 h) hasta `EMAIL_MAX_ATTEMPTS` y luego queda `FALLIDO`. Sin `SENDGRID_API_KEY` se registra en el log y queda `ENVIADO` (R24: LendUp decide cuándo enviar; SendGrid solo entrega).
+4. **Cambios del préstamo.** Entrega y devolución anulan su recordatorio pendiente; `FechaDevolucionActualizada` (extensión pagada o reprogramación aceptada) reemplaza el de devolución por otro en la nueva fecha.
+5. **ReminderScheduler.** Cada `REMINDER_SCHEDULER_DELAY_MS` pasa a `DISPONIBLE` los recordatorios vencidos y envía los correos pendientes de avisos visibles.
+6. **Correo.** Todos los avisos llevan `enviar_correo = true`. El correo sale con SendGrid; si falla se reintenta con espera creciente (0, 1, 5, 30 min, 2 h) hasta `EMAIL_MAX_ATTEMPTS` y luego queda `FALLIDO`. Sin `SENDGRID_API_KEY` se registra en el log y queda `ENVIADO` (R24: LendUp decide cuándo enviar; SendGrid solo entrega).
 
 ## Mensajería
 
-Exchange `lendup.domain.events` (topic), DLX `lendup.domain.events.dlx`, cola `notifications.events.v1` y DLQ `notifications.events.v1.dlq`. Bindings: `reservas.solicitud-creada.v1`, `reservas.confirmada.v1`, `reservas.cancelada.v1`, `pagos.*.v1` y las routing keys configurables de Préstamos y Evidencias. Cada mensaje se reintenta 3 veces (0,5 s, 1 s); si sigue fallando, o no cumple el envelope, se rechaza sin reencolar y va a la DLQ. Si RabbitMQ cae, el consumidor reconecta cada 5 s y readiness responde `DOWN`.
+Exchange `lendup.domain.events` (topic), DLX `lendup.domain.events.dlx`, cola `notifications.events.v1` y DLQ `notifications.events.v1.dlq`. Bindings: las cinco routing keys de Reservas, `pagos.*.v1`, doce de Préstamos, la de Reputación (`RATING_REGISTERED_ROUTING_KEY`) y las dos configurables de Evidencias ([lista](events.md)). Cada mensaje se reintenta 3 veces (0,5 s, 1 s); si sigue fallando, o no cumple el envelope, se rechaza sin reencolar y va a la DLQ. Si RabbitMQ cae, el consumidor reconecta cada 5 s y readiness responde `DOWN`.
 
 ## Seguridad
 
@@ -53,4 +54,4 @@ Esquema de autenticación propio (`FirebaseAuthenticationHandler`): valida el ID
 - Ids `char(36)`, como el monolito y la Fig. 13.
 - EF Core 9 con Pomelo 9 sobre .NET 10 ([ADR 0001](decisions/0001-dotnet-stack-and-pomelo.md)); MySqlConnector fijado en 2.6.2 por una vulnerabilidad de la 2.4.0.
 - Recordatorios y correo ([ADR 0002](decisions/0002-reminders-and-email-delivery.md)).
-- Los cambios de fecha de devolución (extensión o reprogramación) no reprograman el recordatorio de devolución: requiere que Préstamos publique la nueva fecha (contrato pendiente).
+- El rechazo y la cancelación de una solicitud llegan solo con `solicitud_id`: el destinatario sale de los avisos previos de esa solicitud. Por eso el prestatario también recibe "Solicitud enviada".
