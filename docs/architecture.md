@@ -31,6 +31,8 @@ src/LendUp.Notifications.Api
 | MessageBrokerAdapter | `Infrastructure/Messaging/MessageBrokerAdapter` (`BackgroundService`) + `EventProcessor` |
 | EmailAdapter | `Infrastructure/Email/SendGridEmailAdapter` (y `LoggingEmailSender` en local) |
 
+Otros diagramas: [estados](diagrams/estados.png) y [clases](diagrams/clases.png).
+
 Adicionales: `EventNotificationCatalog` (traduce cada evento a avisos en español), `ReminderPolicy` (horarios de recordatorio) e `IdentityRestAdapter` (UID → usuario y correo).
 
 ## Flujos
