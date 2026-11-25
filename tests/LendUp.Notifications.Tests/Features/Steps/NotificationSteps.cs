@@ -11,15 +11,51 @@ namespace LendUp.Notifications.Tests.Features.Steps;
 public sealed class NotificationSteps
 {
     private readonly NotificationsFixture _f = new();
+    private readonly Guid _request = Guid.NewGuid();
     private Guid _reservation = Guid.NewGuid();
     private Notification? _current;
 
+    [Given("que Reservas publica una solicitud nueva")]
     [When("Reservas publica una solicitud nueva")]
     public Task RequestCreated() => _f.PublishAsync("reservas.solicitud-creada.v1", "SolicitudCreada", new Dictionary<string, object>
     {
-        ["solicitud_id"] = Guid.NewGuid().ToString(), ["publicacion_id"] = Guid.NewGuid().ToString(), ["prestatario_usuario_id"] = _f.Borrower.ToString(),
+        ["solicitud_id"] = _request.ToString(), ["publicacion_id"] = Guid.NewGuid().ToString(), ["prestatario_usuario_id"] = _f.Borrower.ToString(),
         ["prestamista_usuario_id"] = _f.Lender.ToString(), ["desde"] = "2026-11-10T09:00:00", ["hasta"] = "2026-11-12T09:00:00",
     });
+
+    [When("el prestamista rechaza la solicitud con el motivo {string}")]
+    public Task RequestRejected(string reason) => _f.PublishAsync("reservas.solicitud-rechazada.v1", "SolicitudRechazada",
+        new Dictionary<string, object> { ["solicitud_id"] = _request.ToString(), ["motivo_rechazo"] = reason });
+
+    [When("el prestatario cancela la solicitud")]
+    public Task RequestCancelled() => _f.PublishAsync("reservas.solicitud-cancelada.v1", "SolicitudCancelada",
+        new Dictionary<string, object> { ["solicitud_id"] = _request.ToString(), ["motivo_cancelacion"] = "Ya no lo necesito", ["cancelada_por_usuario_id"] = _f.Borrower.ToString() });
+
+    [When("Préstamos publica {string}")]
+    public Task LoanEvent(string eventType)
+    {
+        var routingKey = eventType switch
+        {
+            "ObjetoEntregado" => "prestamos.objeto-entregado.v1",
+            "PrestamoActivado" => "prestamos.activado.v1",
+            "DevolucionRegistrada" => "prestamos.devolucion-registrada.v1",
+            "PrestamoVencido" => "prestamos.vencido.v1",
+            "PrestamoFinalizado" => "prestamos.finalizado.v1",
+            "CancelacionRechazada" => "prestamos.cancelacion-rechazada.v1",
+            "ExtensionSolicitada" => "prestamos.extension-solicitada.v1",
+            "ExtensionAceptada" => "prestamos.extension-aceptada.v1",
+            "ExtensionRechazada" => "prestamos.extension-rechazada.v1",
+            "ReprogramacionPropuesta" => "prestamos.reprogramacion-propuesta.v1",
+            "ReprogramacionRechazada" => "prestamos.reprogramacion-rechazada.v1",
+            _ => throw new ArgumentException(eventType),
+        };
+        return _f.PublishAsync(routingKey, eventType, _f.Participants(("reserva_id", _reservation.ToString()), ("cambio_fecha_prestamo_id", Guid.NewGuid().ToString()),
+            ("fecha_propuesta_en", "2026-11-14T09:00:00"), ("devolucion_vigente_en", "2026-11-12T09:00:00"), ("costo_adicional", 40.00m)));
+    }
+
+    [When("Préstamos actualiza la devolución al {string}")]
+    public Task ReturnDateUpdated(string date) => _f.PublishAsync("prestamos.fecha-devolucion-actualizada.v1", "FechaDevolucionActualizada",
+        _f.Participants(("reserva_id", _reservation.ToString()), ("cambio_fecha_prestamo_id", Guid.NewGuid().ToString()), ("devolucion_vigente_en", date)));
 
     [Given("que Reservas confirma una reserva")]
     [When("Reservas confirma una reserva")]
@@ -47,6 +83,7 @@ public sealed class NotificationSteps
         {
             "PagoConfirmado" => "pagos.pago-confirmado.v1",
             "GarantiaDevuelta" => "pagos.garantia-devuelta.v1",
+            "ReembolsoRechazado" => "pagos.reembolso-rechazado.v1",
             _ => throw new ArgumentException(eventType),
         };
         return _f.PublishAsync(routingKey, eventType, _f.Participants(("transaccion_id", Guid.NewGuid().ToString()), ("garantia_id", Guid.NewGuid().ToString()),

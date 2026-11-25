@@ -19,8 +19,8 @@ public class NotificationApplicationServiceTests
             ["prestatario_usuario_id"] = _f.Borrower.ToString(), ["prestamista_usuario_id"] = _f.Lender.ToString(),
             ["desde"] = "2026-11-10T09:00:00", ["hasta"] = "2026-11-12T09:00:00",
         });
-        var n = Assert.Single(_f.Repository.Stored);
-        Assert.Equal(_f.Lender, n.RecipientUserId);
+        Assert.Equal("Solicitud enviada", Assert.Single(_f.For(_f.Borrower)).Title);
+        var n = Assert.Single(_f.For(_f.Lender));
         Assert.Equal(("Nueva solicitud", "Recibiste una solicitud para tu objeto"), (n.Title, n.Message));
         Assert.Equal((OriginType.Solicitud, request), (n.OriginType, n.OriginId));
         Assert.Equal(NotificationState.Disponible, n.State);

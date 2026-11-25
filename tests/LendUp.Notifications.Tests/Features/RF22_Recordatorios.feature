@@ -21,6 +21,19 @@ Característica: RF22 Recordatorios de entrega y devolución
     Cuando llega el "2026-11-11T14:00:00Z" y corre el programador de recordatorios
     Entonces hay 2 recordatorios "Recordatorio de devolución" en estado "DISPONIBLE"
 
+  Escenario: Un cambio de fecha mueve el recordatorio de devolución
+    Cuando Préstamos actualiza la devolución al "2026-11-14T09:00:00"
+    Y llega el "2026-11-11T14:00:00Z" y corre el programador de recordatorios
+    Entonces hay 2 recordatorios "Recordatorio de devolución" en estado "CANCELADA"
+    Y hay 2 recordatorios "Recordatorio de devolución" en estado "PROGRAMADA"
+    Cuando llega el "2026-11-13T14:00:00Z" y corre el programador de recordatorios
+    Entonces hay 2 recordatorios "Recordatorio de devolución" en estado "DISPONIBLE"
+
+  Escenario: Devolver antes de tiempo anula el recordatorio de devolución
+    Cuando Préstamos publica "DevolucionRegistrada"
+    Y llega el "2026-11-11T14:00:00Z" y corre el programador de recordatorios
+    Entonces hay 2 recordatorios "Recordatorio de devolución" en estado "CANCELADA"
+
   Escenario: La cancelación de la reserva cancela los recordatorios pendientes
     Cuando Reservas cancela la reserva
     Entonces hay 4 recordatorios en estado "CANCELADA"
