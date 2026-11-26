@@ -29,6 +29,7 @@ Notificaciones **solo consume**; no publica eventos (Fig. 20). Exchange durable 
 | `prestamos.vencido.v1` | Préstamos | Préstamo vencido | Ambos | PRESTAMO |
 | `prestamos.finalizado.v1` (`LOAN_FINISHED_ROUTING_KEY`) | Préstamos | Préstamo finalizado | Ambos | PRESTAMO |
 | `prestamos.cancelacion-rechazada.v1` | Préstamos | Cancelación no aceptada | Ambos | PRESTAMO |
+| `prestamos.recuperacion-pendiente.v1` | Préstamos | Recuperación pendiente | Ambos | PRESTAMO |
 | `reputation.rating-registered.v1` (`RATING_REGISTERED_ROUTING_KEY`) | Reputación | Nueva calificación | Evaluado | PRESTAMO |
 | `evidencias.incidencia-reportada.v1` (`INCIDENT_REPORTED_ROUTING_KEY`) | Evidencias (sin microservicio) | Incidencia reportada | Ambos | INCIDENCIA |
 | `evidencias.incidencia-resuelta.v1` (`INCIDENT_RESOLVED_ROUTING_KEY`) | Evidencias (sin microservicio) | Incidencia resuelta (mensaje = justificación) | Ambos | INCIDENCIA |

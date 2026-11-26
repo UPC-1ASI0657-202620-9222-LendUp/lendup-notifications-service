@@ -114,6 +114,9 @@ public sealed class EventNotificationCatalog(EventRoutingOptions routes)
                 Draft(e.Id("prestatario_usuario_id"), keyType, loan, OriginType.Prestamo, "Préstamo vencido", $"La devolución venció el {LocalText(due)}. Devuelve el objeto o coordina con el prestamista."),
                 Draft(e.Id("prestamista_usuario_id"), keyType, loan, OriginType.Prestamo, "Préstamo vencido", $"El prestatario no registró la devolución prevista para el {LocalText(due)}."));
         }
+        if (key == EventRoutingOptions.RecoveryPending)
+            return Both(e, "RecuperacionPendiente", e.Id("prestamo_id"), OriginType.Prestamo,
+                "Recuperación pendiente", "La cancelación se completa cuando el prestamista confirma que recuperó el objeto.");
         if (key == EventRoutingOptions.CancellationRejected)
         {
             var loan = e.Id("prestamo_id");
