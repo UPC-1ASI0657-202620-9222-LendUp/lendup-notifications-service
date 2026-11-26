@@ -25,6 +25,7 @@ public sealed record EventRoutingOptions
     public const string ReturnRegistered = "prestamos.devolucion-registrada.v1";
     public const string LoanOverdue = "prestamos.vencido.v1";
     public const string CancellationRejected = "prestamos.cancelacion-rechazada.v1";
+    public const string RecoveryPending = "prestamos.recuperacion-pendiente.v1";
     public const string ExtensionRequested = "prestamos.extension-solicitada.v1";
     public const string ExtensionRejected = "prestamos.extension-rechazada.v1";
     public const string RescheduleProposed = "prestamos.reprogramacion-propuesta.v1";
@@ -42,7 +43,7 @@ public sealed record EventRoutingOptions
         new[]
             {
                 RequestCreated, RequestRejected, RequestCancelled, ReservationConfirmed, ReservationCancelled, PaymentsPattern,
-                ObjectDelivered, LoanActivated, ReturnRegistered, LoanOverdue, LoanFinished, CancellationRejected,
+                ObjectDelivered, LoanActivated, ReturnRegistered, LoanOverdue, LoanFinished, CancellationRejected, RecoveryPending,
                 ExtensionRequested, ExtensionAccepted, ExtensionRejected, RescheduleProposed, RescheduleRejected, ReturnDateUpdated,
                 IncidentReported, IncidentResolved, RatingRegistered,
             }
