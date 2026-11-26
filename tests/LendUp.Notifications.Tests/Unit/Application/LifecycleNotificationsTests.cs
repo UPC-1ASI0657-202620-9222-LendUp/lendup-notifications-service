@@ -252,7 +252,7 @@ public class LifecycleNotificationsTests
         [
             "reservas.solicitud-creada.v1", "reservas.solicitud-rechazada.v1", "reservas.solicitud-cancelada.v1", "reservas.confirmada.v1", "reservas.cancelada.v1", "pagos.*.v1",
             "prestamos.objeto-entregado.v1", "prestamos.activado.v1", "prestamos.devolucion-registrada.v1", "prestamos.vencido.v1", "prestamos.finalizado.v1",
-            "prestamos.cancelacion-rechazada.v1", "prestamos.extension-solicitada.v1", "prestamos.extension-aceptada.v1", "prestamos.extension-rechazada.v1",
+            "prestamos.cancelacion-rechazada.v1", "prestamos.recuperacion-pendiente.v1", "prestamos.extension-solicitada.v1", "prestamos.extension-aceptada.v1", "prestamos.extension-rechazada.v1",
             "prestamos.reprogramacion-propuesta.v1", "prestamos.reprogramacion-rechazada.v1", "prestamos.fecha-devolucion-actualizada.v1",
             "evidencias.incidencia-reportada.v1", "evidencias.incidencia-resuelta.v1", "reputation.rating-registered.v1",
         ];
